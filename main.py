@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn import svm 
+from sklearn.naive_bayes import GaussianNB
 
 def munge_data(csv_input):
     """Take train and test set and make them useable for machine learning algorithms."""
@@ -45,9 +45,9 @@ def main():
     target_data = target_df.values
     test_data = test_df.values
 
-    clf = svm.LinearSVC()
-    clf.fit(train_data, target_data)
-    output = clf.predict(test_data)
+    gnb = GaussianNB()
+    gnb.fit(train_data, target_data)
+    output = gnb.predict(test_data)
 
     with open('output.csv', 'w') as o:
         o.write('PassengerId,Survived\n')
