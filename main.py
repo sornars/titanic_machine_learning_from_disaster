@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
-from sklearn.naive_bayes import GaussianNB
+from sklearn import cross_validation
 from sklearn.metrics import classification_report
+from sklearn.naive_bayes import GaussianNB
 
 def munge_data(csv_input):
     """Take train and test set and make them useable for machine learning algorithms."""
@@ -44,15 +45,7 @@ def map_strings_to_categories(s):
 
 def main():
     train_df = munge_data('./data/train.csv')
-    train_df = train_df.reindex(np.random.permutation(train_df.index))
     train_df = train_df.drop('PassengerId', axis=1)
-
-    cx_df = train_df[800:]
-    cx_target_df = cx_df['Survived']
-    cx_df = cx_df.drop('Survived', axis=1)
-    cx_df = cx_df.sort(axis=1)
-    
-    train_df = train_df[:800]
     target_df = train_df['Survived']
     train_df = train_df.drop('Survived', axis=1)
     train_df = train_df.sort(axis=1)
@@ -62,17 +55,23 @@ def main():
     test_df = test_df.drop('PassengerId', axis=1)
     test_df = test_df.sort(axis=1)
     
-    cx_data = cx_df.values
-    cx_target_data = cx_target_df.values
     train_data = train_df.values
     target_data = target_df.values
     test_data = test_df.values
 
-    gnb = GaussianNB()
-    gnb.fit(train_data, target_data)
-    cx_predictions = gnb.predict(cx_data)
+    scores = []
+    for i in range(0, 5):
+        train_data, cx_data, target_data, cx_target_data = cross_validation.train_test_split(
+            train_data, target_data, test_size=0.2)
 
-    print(classification_report(cx_target_data, cx_predictions))
+        gnb = GaussianNB()
+        gnb.fit(train_data, target_data)
+        scores.append(gnb.score(cx_data, cx_target_data))
+        cx_predictions = gnb.predict(cx_data)
+        print(classification_report(cx_target_data, cx_predictions))
+
+    avg_score = sum(scores)/len(scores)
+    print(avg_score)
 
     predictions = gnb.predict(test_data)
 
