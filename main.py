@@ -24,6 +24,9 @@ def munge_data(csv_input):
     for pclass in classes:
         df.loc[(df['Fare'].isnull()) & (df['Pclass'] == pclass), 'Fare'] = median_fare_by_class[pclass]
 
+    df['Child'] = (df['Age'] < 18).astype(int)
+    df['Age*Class'] = df['AgeFill'] * df['Pclass']
+
     df = df.drop(['Age', 'Name', 'Sex', 'Ticket', 'Cabin', 'Embarked'], axis=1)
 
     return df
