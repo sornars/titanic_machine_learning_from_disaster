@@ -26,6 +26,13 @@ def munge_data(csv_input):
 
     df['Child'] = (df['Age'] < 18).astype(int)
     df['Age*Class'] = df['AgeFill'] * df['Pclass']
+    df['FamilySize'] = df['SibSp'] + df['Parch']
+    df['TicketPrefix'] = df['Ticket'].str.split(' ').str[0].replace('^[0-9]+$', '0', regex=True)
+    ticket_prefixes = df['TicketPrefix'].unique()
+    ticket_prefixes.sort()
+    ticket_prefixes_dict = {prefix: i for i, prefix in enumerate(ticket_prefixes)}
+    df['TicketPrefix'] = df['TicketPrefix'].map(ticket_prefixes_dict)
+
 
     df = df.drop(['Age', 'Name', 'Sex', 'Ticket', 'Cabin', 'Embarked'], axis=1)
 
