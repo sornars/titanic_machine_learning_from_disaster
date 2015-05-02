@@ -11,10 +11,10 @@ def munge_data(csv_input):
 
     most_frequent_port = df['Embarked'].describe().top
     df['EmbarkedMap'] = df['Embarked'].fillna(most_frequent_port)
-    port_cities = df['EmbarkedMap'].unique()
-    port_cities.sort()
-    port_dict = {port: i for i, port in enumerate(port_cities)}
-    df['EmbarkedMap'] = df['EmbarkedMap'].map(port_dict).astype(int)
+    df['EmbarkedMap'] = map_strings_to_categories(df['EmbarkedMap'])
+
+    # df['Honorific'] = df['Name'].str.lower().str.extract('([a-z]+\.)')
+    # df['Honorific'] = map_strings_to_categories(df['Honorific'])
 
     median_age = df['Age'].dropna().median()
     df['AgeFill'] = df['Age'].fillna(median_age)
@@ -28,15 +28,18 @@ def munge_data(csv_input):
     df['Age*Class'] = df['AgeFill'] * df['Pclass']
     df['FamilySize'] = df['SibSp'] + df['Parch']
     df['TicketPrefix'] = df['Ticket'].str.split(' ').str[0].replace('^[0-9]+$', '0', regex=True)
-    ticket_prefixes = df['TicketPrefix'].unique()
-    ticket_prefixes.sort()
-    ticket_prefixes_dict = {prefix: i for i, prefix in enumerate(ticket_prefixes)}
-    df['TicketPrefix'] = df['TicketPrefix'].map(ticket_prefixes_dict)
-
+    df['TicketPrefix'] = map_strings_to_categories(df['TicketPrefix'])
 
     df = df.drop(['Age', 'Name', 'Sex', 'Ticket', 'Cabin', 'Embarked'], axis=1)
 
     return df
+
+def map_strings_to_categories(s):
+    """Extract unique values from a Series and return the series mapped to numbers."""
+    uniques = s.unique()
+    uniques.sort()
+    s_dict = {value: i for i, value in enumerate(uniques)}
+    return s.map(s_dict).astype(int)
 
 def main():
     train_df = munge_data('./data/train.csv')
