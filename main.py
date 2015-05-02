@@ -21,7 +21,6 @@ def munge_data(csv_input):
 
     median_fare_by_class = df.groupby(['Pclass'])['Fare'].median()
     classes = df['Pclass'].unique()
-    classes.sort()
     for pclass in classes:
         df.loc[(df['Fare'].isnull()) & (df['Pclass'] == pclass), 'Fare'] = median_fare_by_class[pclass]
 
