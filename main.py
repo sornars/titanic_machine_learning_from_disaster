@@ -7,14 +7,15 @@ def munge_data(csv_input):
     """Take train and test set and make them useable for machine learning algorithms."""
     df = pd.read_csv(csv_input)
     
-    df['Gender'] = df['Sex'].map({'female': 0, 'male': 1}).astype(int)
+    df['Gender'] = map_strings_to_categories(df['Sex'])
 
     most_frequent_port = df['Embarked'].describe().top
     df['EmbarkedMap'] = df['Embarked'].fillna(most_frequent_port)
     df['EmbarkedMap'] = map_strings_to_categories(df['EmbarkedMap'])
 
-    # df['Honorific'] = df['Name'].str.lower().str.extract('([a-z]+\.)')
-    # df['Honorific'] = map_strings_to_categories(df['Honorific'])
+    df['Honorific'] = df['Name'].str.lower().str.extract('([a-z]+\.)')
+    df['Honorific'] = map_strings_to_categories(df['Honorific'])
+    honorifics = df['Honorific'].unique()
 
     median_age = df['Age'].dropna().median()
     df['AgeFill'] = df['Age'].fillna(median_age)
@@ -43,6 +44,7 @@ def map_strings_to_categories(s):
 
 def main():
     train_df = munge_data('./data/train.csv')
+    train_df = train_df.reindex(np.random.permutation(train_df.index))
     train_df = train_df.drop('PassengerId', axis=1)
 
     cx_df = train_df[800:]
