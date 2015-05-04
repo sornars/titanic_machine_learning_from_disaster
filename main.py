@@ -1,47 +1,48 @@
 import pandas as pd
 import numpy as np
-from sklearn import cross_validation
+from sklearn import cross_validation, svm
 from sklearn.metrics import classification_report
-from sklearn.naive_bayes import GaussianNB
+
+gender_map =  {'female': 0, 'male': 1}
+embarked_map = {'C': 0, 'S': 1, 'Q': 2}
+title_map = {'capt.': 0, 'col.': 1, 'countess.': 2, 'don.': 3, 'dr.': 4,
+             'jonkheer.': 5, 'lady.': 6, 'major.': 7, 'master.': 8, 
+             'miss.': 9, 'mlle.': 10, 'mme.': 11, 'mr.': 12, 'mrs.': 13,
+             'ms.': 14, 'rev.': 15, 'sir.': 16, 'dona.': 17}
+pclasses = [1, 2, 3]
+ticket_map = {'0': 3, 'A': 0, 'C': 4, 'F': 6, 'L': 7, 'P': 1, 'S': 2, 'W': 5}
+cabin_map = {'A': 5, 'B': 6, 'C': 1, 'D': 4, 'E': 2, 'F': 7, 'G': 3, 'T': 8, 'U': 0}
+median_age = None
+median_fare_by_class = pd.Series()
 
 def munge_data(csv_input):
     """Take train and test set and make them useable for machine learning algorithms."""
+    global median_age, median_fare_by_class
     df = pd.read_csv(csv_input)
     
-    df['Gender'] = map_strings_to_categories(df['Sex'])
+    df['Sex'] = df['Sex'].map(gender_map)
 
-    most_frequent_port = df['Embarked'].describe().top
-    df['EmbarkedMap'] = df['Embarked'].fillna(most_frequent_port)
-    df['EmbarkedMap'] = map_strings_to_categories(df['EmbarkedMap'])
+    df['Embarked'] = df['Embarked'].fillna('S').map(embarked_map)
 
-    df['Honorific'] = df['Name'].str.lower().str.extract('([a-z]+\.)')
-    df['Honorific'] = map_strings_to_categories(df['Honorific'])
-    honorifics = df['Honorific'].unique()
+    df['Title'] = df['Name'].str.lower().str.extract('([a-z]+\.)').map(title_map)
 
-    median_age = df['Age'].dropna().median()
-    df['AgeFill'] = df['Age'].fillna(median_age)
+    if not median_age:
+        median_age = df['Age'].dropna().median()
+    df['Age'] = df['Age'].fillna(median_age)
 
-    median_fare_by_class = df.groupby(['Pclass'])['Fare'].median()
-    classes = df['Pclass'].unique()
-    for pclass in classes:
+    if median_fare_by_class.empty:
+        median_fare_by_class = df.groupby(['Pclass'])['Fare'].median()
+    for pclass in pclasses:
         df.loc[(df['Fare'].isnull()) & (df['Pclass'] == pclass), 'Fare'] = median_fare_by_class[pclass]
 
     df['Child'] = (df['Age'] < 18).astype(int)
-    df['Age*Class'] = df['AgeFill'] * df['Pclass']
+    df['Age*Class'] = df['Age'] * df['Pclass']
     df['FamilySize'] = df['SibSp'] + df['Parch']
-    df['TicketPrefix'] = df['Ticket'].str.split(' ').str[0].replace('^[0-9]+$', '0', regex=True)
-    df['TicketPrefix'] = map_strings_to_categories(df['TicketPrefix'])
-
-    df = df.drop(['Age', 'Name', 'Sex', 'Ticket', 'Cabin', 'Embarked'], axis=1)
-
+    df['Ticket'] = df['Ticket'].str.split(' ').str[0].replace('^[0-9]+$', '0', regex=True).str[0].map(ticket_map)
+    
+    df = df.drop(['Name', 'Cabin'], axis=1)
+    
     return df
-
-def map_strings_to_categories(s):
-    """Extract unique values from a Series and return the series mapped to numbers."""
-    uniques = s.unique()
-    uniques.sort()
-    s_dict = {value: i for i, value in enumerate(uniques)}
-    return s.map(s_dict).astype(int)
 
 def main():
     train_df = munge_data('./data/train.csv')
@@ -64,16 +65,16 @@ def main():
         train_data, cx_data, target_data, cx_target_data = cross_validation.train_test_split(
             train_data, target_data, test_size=0.2)
 
-        gnb = GaussianNB()
-        gnb.fit(train_data, target_data)
-        scores.append(gnb.score(cx_data, cx_target_data))
-        cx_predictions = gnb.predict(cx_data)
+        clf = svm.SVC(kernel='linear')
+        clf.fit(train_data, target_data)
+        scores.append(clf.score(cx_data, cx_target_data))
+        cx_predictions = clf.predict(cx_data)
         print(classification_report(cx_target_data, cx_predictions))
 
     avg_score = sum(scores)/len(scores)
     print(avg_score)
 
-    predictions = gnb.predict(test_data)
+    predictions = clf.predict(test_data)
 
     with open('output.csv', 'w') as o:
         o.write('PassengerId,Survived\n')
