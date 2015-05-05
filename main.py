@@ -18,39 +18,38 @@ cabin_map = {'A': 5, 'B': 6, 'C': 1, 'D': 4, 'E': 2, 'F': 7, 'G': 3, 'T': 8, 'U'
 median_age_by_class = pd.Series()
 median_fare_by_class = pd.Series()
 
-def munge_data(csv_input):
+def munge_data(csv_input, fillna=True):
     """Take train and test set and make them useable for machine learning algorithms."""
     global median_age_by_class, median_fare_by_class
     df = pd.read_csv(csv_input)
     
-    df['Sex'] = df['Sex'].map(gender_map)
-
-    df['Embarked'] = df['Embarked'].fillna('S').map(embarked_map)
-
-    df['Title'] = df['Name'].str.lower().str.extract('([a-z]+\.)').map(title_map)
-
     if median_age_by_class.empty:
         median_age_by_class = df.groupby(['Pclass'])['Age'].median()
 
     if median_fare_by_class.empty:
         median_fare_by_class = df.groupby(['Pclass'])['Fare'].median()
-    
-    for pclass in pclasses:
-        df.loc[(df['Age'].isnull()) & (df['Pclass'] == pclass), 'Age'] = median_age_by_class[pclass]
-        df.loc[(df['Fare'].isnull()) & (df['Pclass'] == pclass), 'Fare'] = median_fare_by_class[pclass]
 
+    if fillna:
+        df['Cabin'] = df['Cabin'].str[0].fillna('U')
+        df['Embarked'] = df['Embarked'].fillna('S') 
+        for pclass in pclasses:
+            df.loc[(df['Age'].isnull()) & (df['Pclass'] == pclass), 'Age'] = median_age_by_class[pclass]
+            df.loc[(df['Fare'].isnull()) & (df['Pclass'] == pclass), 'Fare'] = median_fare_by_class[pclass]
+
+    df['Sex'] = df['Sex'].map(gender_map)
+    df['Embarked'] = df['Embarked'].map(embarked_map)
+    df['Title'] = df['Name'].str.lower().str.extract('([a-z]+\.)').map(title_map)
     df['Child'] = (df['Age'] < 18).astype(int)
     df['Age*Class'] = df['Age'] * df['Pclass']
     df['FamilySize'] = df['SibSp'] + df['Parch']
     df['HasFamily'] = (df['FamilySize'] > 0).astype(int)
     df['Ticket'] = df['Ticket'].str.split(' ').str[0].replace('^[0-9]+$', '0', regex=True).str[0].map(ticket_map)
-    df['Cabin'] = df['Cabin'].str[0].fillna('U').map(cabin_map)
-    df = df.drop(['Name'], axis=1)
-    
-    return df
+    df['Cabin'] = df['Cabin'].map(cabin_map)
+    df = df.drop(['Name', 'Ticket', 'Cabin'], axis=1)
+    return df.dropna()
 
 def main():
-    train_df = munge_data('./data/train.csv')
+    train_df = munge_data('./data/train.csv', False)
     train_df = train_df.drop('PassengerId', axis=1)
     target_df = train_df['Survived']
     train_df = train_df.drop('Survived', axis=1)
